@@ -24,6 +24,13 @@ func main() {
 		Run:   deleteProject,
 	}
 
+	// Add a subcommand for listing projects
+	var listCmd = &cobra.Command{
+		Use:   "list-projects",
+		Short: "Lists all GitHub projects",
+		Run:   getAllProject,
+	}
+
 	// // Add a flag for the GitHub access token
 	// rootCmd.PersistentFlags().StringVar(&token, "token", "", "GitHub access token")
 
@@ -33,6 +40,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to mark 'name' flag as required: %v", err)
 	}
+
+	// Add the listCmd as a subcommand of the rootCmd
+	rootCmd.AddCommand(listCmd)
 
 	// Add a flag for the GitHub project orgnization
 	rootCmd.Flags().StringVarP(&orgnization, "orgnization", "s", "vivsoftorg2", "GitHub project orgnization")
@@ -55,11 +65,13 @@ func deleteProject(cmd *cobra.Command, args []string) {
 
 	client := github.NewTokenClient(ctx, token)
 	repo, _, err := client.Repositories.Get(ctx, orgnization, projectName)
+	repo_name := repo.GetName()
+	repo_url := repo.GetHTMLURL()
 	if err == nil {
 
 		// Prompt the user for confirmation before deleting the project
 		var confirm string
-		fmt.Print("Do you want to Delete the Repository " + repo.GetName() + " with URL is " + repo.GetHTMLURL())
+		fmt.Print("Do you want to Delete the Repository " + repo_url + "? (yes/no): ")
 		_, err = fmt.Scanln(&confirm)
 		if err != nil {
 			log.Fatalf("Failed to read user input: %v", err)
@@ -69,7 +81,7 @@ func deleteProject(cmd *cobra.Command, args []string) {
 			return
 		}
 		// Delete the project
-		_, err := client.Repositories.Delete(ctx, orgnization, projectName)
+		_, err := client.Repositories.Delete(ctx, orgnization, repo_name)
 		if err != nil {
 			fmt.Print(err)
 		}
@@ -81,26 +93,27 @@ func deleteProject(cmd *cobra.Command, args []string) {
 
 }
 
-// func getAllProject(cmd *cobra.Command, args []string) {
+func getAllProject(cmd *cobra.Command, args []string) {
 
-// 	token = os.Getenv("GITHUB_TOKEN")
-// 	if token == "" {
-// 		log.Fatal("GitHub access token not provided")
-// 	}
+	token = os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		log.Fatal("GitHub access token not provided")
+	}
 
-// 	ctx := context.Background()
+	ctx := context.Background()
 
-// 	client := github.NewTokenClient(ctx, token)
+	client := github.NewTokenClient(ctx, token)
 
-// 	// list public repositories for org "github"
-// 	opt := &github.RepositoryListByOrgOptions{Type: "private"}
-// 	repos, _, err := client.Repositories.ListByOrg(ctx, orgnization, opt)
-// 	if err != nil {
-// 		fmt.Print(err)
-// 	}
-// 	for repo := range repos {
-// 		fmt.Print("\n")
-// 		fmt.Print(repos[repo].GetName())
-// 	}
+	// list public repositories for org "github"
+	opt := &github.RepositoryListByOrgOptions{Type: "private"}
+	repos, _, err := client.Repositories.ListByOrg(ctx, orgnization, opt)
+	if err != nil {
+		fmt.Print(err)
+	}
+	fmt.Println("All Repositories in Orgnization " + orgnization)
+	for repo := range repos {
+		fmt.Print("\n")
+		fmt.Print(repos[repo].GetName())
+	}
 
-// }
+}
